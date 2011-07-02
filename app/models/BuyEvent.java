@@ -18,20 +18,20 @@ public class BuyEvent extends Model {
 	public String description;
 	public int guts;
 
-	public BuyEvent(Shop shop, Client client, Money money, String text) {
+	public BuyEvent(Shop shop, Phone phone, Money prize, String product) {
+		this(shop, shop.register(phone), prize, product);
+	}
+
+	public BuyEvent(Shop shop, Client client, Money prize, String product) {
 		this.shop = shop;
 		this.client = client;
-		this.money = money;
-		this.description = text;
+		this.money = prize;
+		this.description = product;
 		this.guts = shop.toGuts(money);
 	}
 
 	public static List<BuyEvent> findBy(Shop shop) {
 		return find("byShop", shop).fetch();
-	}
-
-	public static int transitionsBy(Shop shop) {
-		return findBy(shop).size();
 	}
 
 	public static int transitionsBy(Market market) {
@@ -46,8 +46,11 @@ public class BuyEvent extends Model {
 		return find("byClient", client).fetch();
 	}
 
-	public static int transitionsBy(Client client) {
-		return findBy(client).size();
+	public static int guts(Client client) {
+		int result = 0;
+		for (BuyEvent buy : findBy(client)) 
+			result += buy.guts;
+		return result ;
 	}
 
 }

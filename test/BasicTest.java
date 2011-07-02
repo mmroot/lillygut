@@ -1,20 +1,29 @@
+import static models.Money.CHF;
+
 import org.h2.engine.User;
 
 import org.junit.*;
+
 import java.util.*;
+
+import play.db.jpa.JPABase;
 import play.test.*;
 import models.*;
 
 public class BasicTest extends UnitTest {
+	private static final String CLAUDIO_MOBILE = "+41788048273";
 	
 	@Before
 	public void setup(){
-		Promo.deleteAll();
+		ConsumeEvent.deleteAll();
 		MarketPrePayEvent.deleteAll();
 		BuyEvent.deleteAll();
+		
+		Promo.deleteAll();
 		Shop.deleteAll();
-		Market.deleteAll();
 		Client.deleteAll();
+		Market.deleteAll();
+		Phone.deleteAll();
 	}
 
     @Test
@@ -28,7 +37,7 @@ public class BasicTest extends UnitTest {
 
     @Test
     public void addShopToTheMarket() {
-    	Market chiasso = chiassoMarket().save();
+    	Market chiasso = chiasso().save();
     	new Shop("Pfahler SA", chiasso).save();
     	
     	Shop shopFound = Shop.find("byName", "Pfahler SA").first();
@@ -39,38 +48,50 @@ public class BasicTest extends UnitTest {
 
     @Test
     public void addUser() {
-    	new Client("+41788048273").save();
+    	new Phone("+41788048273").save();
 
-        assertEquals(1,Client.find("byMobile", "+41788048273").fetch().size());
+        assertEquals(1,Phone.find("byMobile", "+41788048273").fetch().size());
     }
 
     @Test
     public void clientBuysFor100CHFandGets200Lillyguts() {
-    	Client client = claudio();
-    	Market chiasso = chiassoMarket();
+    	Phone phone = claudio();
+    	Market chiasso = chiasso();
     	Shop pfahler = pfahler(chiasso);
     	
-    	client.buys(pfahler,Money.CHF(100), "Piatto antico in vetro di Murano");
+    	phone.buys(pfahler,Money.CHF(100), "Piatto antico in vetro di Murano");
     	
-        assertEquals(200, client.guts(chiasso));
+        assertEquals(200, phone.guts(chiasso));
+    }
+
+    @Test
+    public void shopSellsFor100FrancsAndClientGets200Lillyguts() {
+    	Phone phone = claudio();
+    	Market chiasso = chiasso();
+    	Shop pfahler = pfahler(chiasso);
+    	
+    	Client client = pfahler.register(phone);
+		pfahler.sells(client,Money.CHF(100), "Piatto antico in vetro di Murano");
+    	
+        assertEquals(200, phone.guts(chiasso));
     }
 
     @Test
     public void buyGeneratesTransitions() {
-    	Client client = claudio();
-    	Market chiasso = chiassoMarket();
+    	Phone phone = claudio();
+    	Market chiasso = chiasso();
     	Shop shop = pfahler(chiasso);
     	
-    	client.buys(shop,Money.CHF(100), "Piatto antico in vetro di Murano");
+    	phone.buys(shop,Money.CHF(100), "Piatto antico in vetro di Murano");
     	
         assertEquals(1, shop.transitions());
         assertEquals(1, chiasso.transitions());
-        assertEquals(1, client.transitions());
+        assertEquals(1, Client.findBy(phone, chiasso).transitions());
     }
 
     @Test
     public void marketBuys10000Lillyguts() {
-    	Market chiasso = chiassoMarket();
+    	Market chiasso = chiasso();
     	
     	chiasso.prePay(new Guts(10000));
     	
@@ -80,13 +101,51 @@ public class BasicTest extends UnitTest {
 
     @Test
     public void shopAddAPromo() {
-    	Market chiasso = chiassoMarket();
+    	Market chiasso = chiasso();
     	Shop shop = pfahler(chiasso);
     	
     	shop.addPromo("Piatto antico in vetro di Murano",Money.CHF(100), Money.CHF(30), new Guts(30));
     	
+    	assertEquals(1, Promo.findBy(shop).size());
         assertEquals(1, shop.promos().size());
         assertEquals(1, shop.transitions());
+    	assertTrue(Promo.findBy(shop).get(0).isValid());
+    }
+
+    @Test
+    public void shopWillRegisterClaudio() {
+    	assertEquals(chiasso().clients().size(), 0);
+
+    	pfahler(chiasso()).register(CLAUDIO_MOBILE);
+    	
+    	assertNotNull(Phone.findByMobile(CLAUDIO_MOBILE));
+    	assertTrue(chiasso().hasClient(CLAUDIO_MOBILE));
+    	assertEquals(chiasso().clients().size(), 1);
+    }
+
+    @Test
+    public void buyingAutomaticallyRegistersClaudio() {
+    	Phone cliaudiosPhone = claudio();
+    	Shop shop = pfahler(chiasso());
+    	
+    	cliaudiosPhone.buys(shop,CHF(100), "Piatto antico in vetro di Murano");
+    	
+    	assertTrue(chiasso().hasClient(CLAUDIO_MOBILE));
+    }
+
+    @Test
+    public void claudioUsesGutsForAPromo() {
+    	Phone claudiosPhone = claudio();
+		Shop shop = pfahler(chiasso());
+		claudiosPhone.buys(shop,CHF(100), "Piatto antico in vetro di Murano");
+    	Promo promo = shop.addPromo("Piatto nuovo di zecca",Money.CHF(100), Money.CHF(30), new Guts(30));
+
+    	claudiosPhone.consume(promo);
+
+        assertEquals(170, claudiosPhone.guts(chiasso()));
+    	assertEquals(1, Promo.findBy(pfahler(chiasso())).size());
+    	assertFalse(promo.isValid());
+        assertEquals(3, pfahler(chiasso()).transitions());
     }
 
     @Test
@@ -100,8 +159,11 @@ public class BasicTest extends UnitTest {
      * 
      * 
      */
-	private Market chiassoMarket() {
-		return new Market(955, "Chiasso").save();
+	private Market chiasso() {
+		Market chiasso = Market.findByPhone(955);
+		if(chiasso == null)
+			chiasso = new Market(955, "Chiasso").save();
+		return chiasso;
 	}
 
 	private Market findChiasso() {
@@ -109,10 +171,19 @@ public class BasicTest extends UnitTest {
 	}
 
 	private Shop pfahler(Market chiasso) {
-		return new Shop("Pfahler SA", chiasso).save();
+		Shop shop = Shop.findByName("Pfahler SA");
+		if(shop == null)
+			shop = new Shop("Pfahler SA", chiasso).save();
+		return shop;
 	}
 
-	private Client claudio() {
-		return new Client("+41788048273").save();
+	private Phone claudio() {
+		return new Phone("+41788048273").save();
+	}
+
+	private Promo preparePromo(Phone phone) {
+		Shop shop = pfahler(chiasso());
+    	phone.buys(shop,CHF(100), "Piatto antico in vetro di Murano");
+    	return shop.addPromo("Piatto nuovo di zecca",Money.CHF(100), Money.CHF(30), new Guts(30));
 	}
 }

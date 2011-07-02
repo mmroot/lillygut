@@ -1,39 +1,40 @@
 package models;
 
 import java.util.List;
+import java.util.Set;
 
 import javax.persistence.Entity;
+import javax.persistence.ManyToOne;
 
 import play.db.jpa.Model;
 
 @Entity
-public class Client extends Model {
+public class Client extends Model{
 
-	public String mobile;
+	@ManyToOne
+	public Phone phone;
+	@ManyToOne
+	public Market market;
 
-	public Client(String mobile) {
-		this.mobile = mobile;
+	public Client(Phone phone, Market market) {
+		this.phone = phone;
+		this.market = market;
 	}
 
-	public void buys(Shop shop, Money amount, String text) {
-		new BuyEvent(shop, this, amount, text).save();
+	public static List<Client> findBy(Market market) {
+		return find("byMarket", market).fetch();
 	}
 
-	public int guts(Market market) {
-		int result = 0;
-		List<BuyEvent> buys = buys();
-		for (BuyEvent buy : buys) 
-			result += buy.guts;
-		return result ;
+	public static Client findBy(Phone phone, Market market) {
+		return find("byPhoneAndMarket", phone, market).first();
 	}
-
-	private List<BuyEvent> buys() {
-		return BuyEvent.findBy(this);
-	}
-
-
+	
 	public int transitions() {
-		return BuyEvent.transitionsBy(this);
+		return BuyEvent.findBy(this).size();
+	}
+
+	public int guts() {
+		return BuyEvent.guts(this)-ConsumeEvent.guts(this);
 	}
 
 }

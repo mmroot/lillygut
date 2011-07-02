@@ -1,14 +1,13 @@
 package models;
 
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
 import javax.persistence.CascadeType;
 import javax.persistence.Entity;
-import javax.persistence.ManyToOne;
 import javax.persistence.OneToMany;
 
-import play.db.jpa.JPABase;
 import play.db.jpa.Model;
 
 @Entity
@@ -53,6 +52,25 @@ public class Market extends Model {
 
 	public Guts guts() {
 		return MarketPrePayEvent.findGutsBy(this);
+	}
+
+	public List<Client> clients() {
+		return Client.findBy(this);
+	}
+
+	public static Market findByPhone(int shortCode) {
+		return Market.find("byPhone", shortCode).first();
+	}
+
+	public boolean hasClient(String mobile) {
+		Phone thePhone = Phone.findByMobile(mobile);
+		if(thePhone == null)
+			return false;
+		return Client.findBy(thePhone, this) != null;
+	}
+
+	public Client findClientBy(Phone phone) {
+		return Client.findBy(phone, this);
 	}
 
 }

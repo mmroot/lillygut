@@ -23,26 +23,46 @@ public class Shop extends Model {
 	}
 
 	public int transitions() {
-		return clientBuyEvents() + promoEvents();
+		return buyEvents() + promoEvents() + consumeEvents();
+	}
+
+	private int buyEvents() {
+		return BuyEvent.findBy(this).size();
 	}
 
 	private int promoEvents() {
 		return Promo.findBy(this).size();
 	}
 
-	private int clientBuyEvents() {
-		return BuyEvent.transitionsBy(this);
+	private int consumeEvents() {
+		return ConsumeEvent.findBy(this).size();
 	}
 
 	public int toGuts(Money money) {
 		return market.toGuts(money);
 	}
 
-	public void addPromo(String description, Money fullPrice, Money price, Guts guts) {
-		new Promo(this, description, fullPrice, price, guts).save();
+	public Promo addPromo(String description, Money fullPrice, Money price, Guts guts) {
+		return new Promo(this, description, fullPrice, price, guts).save();
 	}
 
 	public List<Promo> promos() {
 		return Promo.findBy(this);
+	}
+
+	public Client register(String mobile) {
+		return register(Phone.findOrCreateByMobile(mobile));
+	}
+
+	public Client register(Phone phone) {
+		return new Client(phone, market).save();
+	}
+
+	public void sells(Client client, Money prize, String product) {
+		new BuyEvent(this, client, prize, product).save();
+	}
+
+	public static Shop findByName(String string) {
+		return Shop.find("byName", string).first();
 	}
 }

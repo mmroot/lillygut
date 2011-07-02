@@ -36,4 +36,12 @@ public class Promo extends Model {
 		return Promo.find("byShop", shop).fetch();
 	}
 
+	public Market market() {
+		return shop.market;
+	}
+ 
+	public boolean isValid(){
+		return guts.quantity > ConsumeEvent.guts(this);
+	}
+
 }
