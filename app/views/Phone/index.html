@@ -1,0 +1,20 @@
+#{extends 'main.html' /}
+#{set title:'Telephone simulator' /}
+
+<form id="sms_form" action="@{Phone.send()}" method="POST">
+    <label>Tuo telefono: ${phone}</label>
+    #{ifnot phone}
+	    <input type="text" name="phone"/><br /> 
+	#{/ifnot}
+	#{else}
+	    <input type="hidden" name="phone" value="${phone}"/><br /> 
+	#{/else}
+    #{if sms}
+		<ul>
+			<li>${sms}</li>
+		</ul>
+	#{/if}
+    Messaggio:
+    <textarea name="sms"></textarea>
+    <input name="send" type="submit" value="Send!" />
+</form>

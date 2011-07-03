@@ -191,9 +191,4 @@ public class BasicTest extends UnitTest {
 		return new Phone("+41788048273").save();
 	}
 
-	private Promo preparePromo(Phone phone) {
-		Shop shop = pfahler(chiasso());
-    	phone.buys(shop,CHF(100), "Piatto antico in vetro di Murano");
-    	return shop.addPromo("Piatto nuovo di zecca",Money.CHF(100), Money.CHF(30), new Guts(30));
-	}
 }

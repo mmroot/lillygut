@@ -1,0 +1,23 @@
+
+#{selenium 'check the form'}
+    open('/phone')
+    assertTitle('Telephone simulator')
+    assertElementPresent('//input[@name='phone']')
+    assertElementPresent('//textarea[@name='sms']')
+#{/selenium}
+
+#{selenium 'sending sms will show your phone number'}
+    open('/phone')
+    type('phone', '+41793759109')
+    type('sms', 'help')
+    clickAndWait('send')
+    assertTextPresent('+41793759109')
+#{/selenium}
+
+#{selenium 'sending sms will show the history of sent and received messages'}
+    open('/phone')
+    type('phone', '+41793759109')
+    type('sms', 'help')
+    clickAndWait('send')
+    assertTextPresent('help')
+#{/selenium}
