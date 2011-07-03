@@ -143,9 +143,19 @@ public class BasicTest extends UnitTest {
     	claudiosPhone.consume(promo);
 
         assertEquals(170, claudiosPhone.guts(chiasso()));
-    	assertEquals(1, Promo.findBy(pfahler(chiasso())).size());
-    	assertFalse(promo.isValid());
+    	assertFalse(Promo.findBy(pfahler(chiasso())).get(0).isValid());//but is not valid
         assertEquals(3, pfahler(chiasso()).transitions());
+    }
+
+    @Test(expected=IllegalArgumentException.class)
+    public void claudioCannotUsANonValidPromo() {
+    	Phone claudiosPhone = claudio();
+		Shop shop = pfahler(chiasso());
+		claudiosPhone.buys(shop,CHF(100), "Piatto antico in vetro di Murano");
+    	Promo promo = shop.addPromo("Piatto nuovo di zecca",Money.CHF(100), Money.CHF(30), new Guts(30));
+    	claudiosPhone.consume(promo);
+
+    	claudiosPhone.consume(promo);
     }
 
     @Test

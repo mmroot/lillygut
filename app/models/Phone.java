@@ -30,13 +30,16 @@ public class Phone extends Model {
 
 	public static Phone findOrCreateByMobile(String mobile) {
 		Phone phone = findByMobile(mobile);
-		if(phone==null)
+		if (phone == null)
 			phone = new Phone(mobile).save();
 		return phone;
 	}
 
 	public void consume(Promo promo) {
+		if (!promo.isValid())
+			throw new IllegalArgumentException("The promo already consumed.");
 		new ConsumeEvent(this, promo).save();
+
 	}
 
 }
